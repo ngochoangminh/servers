@@ -1,0 +1,86 @@
+version: '3.6'
+networks:
+  my-net:
+    name: 'my-net'
+    driver: bridge
+    attachable: true
+
+services:
+  my-postgres:
+    container_name: my-postgres
+    image: postgres:14.4-alpine
+    restart: always
+    ports: 
+      - 0.0.0.0:5432:5432
+    volumes:
+      - ./db_data/pgdb_data:/var/lib/postgresql/data
+      - ./init_user_db.sh:/docker-entrypoint-initdb.d/init_user_db.sh
+    env_file:
+      - ../.env
+    environment:
+      - POSTGRES_USER=ngochm
+      - POSTGRES_PASSWORD=Ngochm369
+      - POSTGRES_DB=user_db
+    networks:
+      my-net:
+
+  my-mongodb:
+    container_name: my-mongodb
+    image: mongo:latest
+    restart: always
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=ngochm
+      - MONGO_INITDB_ROOT_PASSWORD=123456
+      - MONGO_INITDB_DATABASE=mongo_db
+    ports:
+      - 0.0.0.0:27027:27017
+    volumes:
+      - ./db_data/mongodb_data:/data/db
+    networks:
+      my-net:
+
+  my-redis:
+    container_name: my-redis
+    image: redis:latest
+    restart: always
+    ports:
+      - 0.0.0.0:6380:6379
+    command: redis-server --save 20 1 --loglevel warning
+    networks:
+      my-net:
+
+  my-kafka-zookeeper:
+    image: confluentinc/cp-zookeeper:7.1.3
+    container_name: my-kafka-zookeeper
+    restart: always
+    ports:
+      - 2181:2181
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      my-net:
+
+  my-kafka-broker:
+    image: confluentinc/cp-kafka:7.1.3
+    container_name: my-kafka-broker
+    restart: always
+    ports:
+      - "9095:9092"
+    depends_on:
+      - my-kafka-zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: my-kafka-zookeeper:2181
+      KAFKA_LISTENERS: LISTENER_INTERN://my-kafka-broker:29092,LISTENER_EXTERN://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: LISTENER_INTERN://my-kafka-broker:29092,LISTENER_EXTERN://192.53.115.165:9095
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: LISTENER_INTERN:PLAINTEXT,LISTENER_EXTERN:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: LISTENER_INTERN
+
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 100
+    networks:
+      my-net:

@@ -1,0 +1,13 @@
+version: '3.6'
+
+networks:
+  my-apps-net:
+    driver: bridge
+
+services:
+  my-app:
+    image: <host>:<port>/my-apps:latest
+    ports:
+      - 0.0.0.0:8166:8080
+    networks:
+      my-apps-net:
